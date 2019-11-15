@@ -1,0 +1,51 @@
+#Импортируем библиотеки
+import requests
+import csv
+from bs4 import BeautifulSoup as bs
+#Создаем иллюзию браузера, чтобы не быть забаненными на сайте.
+headers = {'accept': '*/*',
+           'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.75 Safari/537.36'}
+
+base_url = 'https://www.zakon.kz/news'
+
+#Создаем функцию для парсинга
+def z_parse(base_url, headers):
+    #создаем пустой список, в который в последующем будем вносить спарсенные данные
+    news = []
+    #Используем функцию session библиотеки requests для того чтобы эмулировать работу браузера
+    session = requests.Session()
+    request = session.get(base_url, headers=headers)
+    #Проверяем отдал ли сервер данные, которые нам необходимо спарсить
+    if request.status_code == 200:
+        soup = bs(request.content, 'html.parser')
+        #Просим найти нам все дивы, по определенному аттрибуту
+        divs = soup.find_all('div', attrs={'class': 'cat_news_item'})
+        for div in divs:
+            #Удостоверяемся , что мы не получаем ответ none на запрос дива.
+            if (div.find('a', attrs={'class': 'tahoma font12'}) != None):
+                title = div.find('a', attrs={'class': 'tahoma font12'}).text
+                href = div.find('a', attrs={'class': 'tahoma font12'})['href']
+                #Добавляем спарсенные данные в лист
+                news.append({
+                    'title': title,
+                    'href': href
+                })
+        print(news)
+    else:
+        print('Error')
+    #Возвращаем лист
+    return news
+
+#Функция для вывода спарсенных данных в отдельный csv файл
+def files_writer(news):
+    #Открываем сам файл куда будем записывать спарсенные данные
+    with open('parsed_jobs.csv', 'w') as file:
+        a_pen = csv.writer(file)
+        a_pen.writerow(('Новость', 'URL'))
+        #Пишем данные из листа news
+        for new in news:
+            a_pen.writerow((new['title'], new['href']))
+
+#Вызываем определенные раннее функции
+news = z_parse(base_url, headers)
+files_writer(news)
